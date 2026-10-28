@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego Educativo: El Ciclo Vital de la Planta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    :root {
+      --primary: #2e7d32;
+      --primary-light: #4caf50;
+      --secondary: #ff9800;
+      --accent: #8bc34a;
+      --bg-gradient: linear-gradient(135deg, #f1f8e9 0%, #dedede 50%, #c8e6c9 100%);
+      --card-bg: #ffffff;
+      --text-dark: #1b5e20;
+      --text-muted: #33691e;
+      --shadow: 0 10px 25px rgba(46, 125, 50, 0.2);
+      --radius: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #2c3e50;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 960px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 25px 30px;
+      border: 4px solid #a5d6a7;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Fredoka', sans-serif;
+      color: var(--primary);
+      font-size: 2.3rem;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      text-shadow: 2px 2px 0px #c8e6c9;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    /* Tablero de Estadísticas */
+    .dashboard {
+      display: flex;
+      justify-content: space-around;
+      background: #f1f8e9;
+      padding: 12px 20px;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      border: 2px dashed #a5d6a7;
+    }
+
+    .stat-box {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #33691e;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.6rem;
+      color: var(--primary);
+    }
+
+    /* Rejilla de Cartas */
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+      gap: 15px;
+      perspective: 1000px;
+    }
+
+    /* Estilos de las Cartas */
+    .card {
+      height: 145px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+      border-radius: 16px;
+    }
+
+    .card:hover {
+      transform: scale(1.04);
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card.matched {
+      transform: rotateY(180deg) scale(0.95);
+      cursor: default;
+      opacity: 0.88;
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 3px solid white;
+    }
+
+    /* Reverso de la Carta */
+    .card-front {
+      background: linear-gradient(135deg, #66bb6a 0%, #2e7d32 100%);
+      color: white;
+    }
+
+    .card-front svg {
+      width: 48px;
+      height: 48px;
+      fill: rgba(255,255,255,0.85);
+    }
+
+    .card-front span {
+      font-family: 'Fredoka', sans-serif;
+      margin-top: 8px;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+    }
+
+    /* Frente de la Carta (Contenido) */
+    .card-back {
+      background-color: #ffffff;
+      transform: rotateY(180deg);
+      border: 3px solid var(--primary-light);
+      justify-content: space-evenly;
+    }
+
+    .card.matched .card-back {
+      background-color: #e8f5e9;
+      border-color: #66bb6a;
+    }
+
+    .card-icon {
+      font-size: 2.3rem;
+      line-height: 1;
+    }
+
+    .card-text {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      line-height: 1.2;
+    }
+
+    .card-desc {
+      font-size: 0.76rem;
+      color: #37474f;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+
+    /* Modal / Felicitación */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: white;
+      padding: 35px 30px;
+      border-radius: 24px;
+      text-align: center;
+      max-width: 430px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      transform: translateY(30px) scale(0.9);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 4px solid var(--primary-light);
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-emoji {
+      font-size: 4rem;
+      margin-bottom: 10px;
+      animation: bounce 1s infinite alternate;
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-10px); }
+    }
+
+    .modal h2 {
+      font-family: 'Fredoka', sans-serif;
+      color: var(--primary);
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .modal p {
+      color: #555;
+      font-size: 1.05rem;
+      margin-bottom: 20px;
+    }
+
+    .modal-stats {
+      background: #f1f8e9;
+      padding: 14px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .btn-reset {
+      background: linear-gradient(135deg, #ff9800 0%, #e65100 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 1.1rem;
+      font-family: 'Fredoka', sans-serif;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-reset:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 152, 0, 0.5);
+    }
+
+    .btn-reset:active {
+      transform: translateY(1px);
+    }
+
+    /* Diseño Adaptativo */
+    @media (max-width: 600px) {
+      .game-board {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .card {
+        height: 130px;
+      }
+      .card-icon {
+        font-size: 1.9rem;
+      }
+      .card-text {
+        font-size: 0.85rem;
+      }
+      .card-desc {
+        font-size: 0.68rem;
+      }
+      h1 {
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>🌱 El Ciclo Vital de la Planta 🌻</h1>
+      <p class="subtitle">¡Empareja cada etapa del crecimiento vegetal con su explicación!</p>
+    </header>
+
+    <div class="dashboard">
+      <div class="stat-box">
+        <div class="stat-label">Intentos</div>
+        <div class="stat-value" id="moves">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Parejas</div>
+        <div class="stat-value" id="matches">0 / 6</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Tiempo</div>
+        <div class="stat-value" id="timer">00:00</div>
+      </div>
+    </div>
+
+    <div class="game-board" id="board"></div>
+  </div>
+
+  <!-- Modal de Victoria / Felicitaciones -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-emoji">🌻✨🎉</div>
+      <h2>¡Felicidades, Gran Botánico/a!</h2>
+      <p>¡Has aprendido perfectamente las etapas del ciclo vital de las plantas y cómo crece la vida en la naturaleza!</p>
+      
+      <div class="modal-stats">
+        <div>⏱️ Tiempo logrado: <span id="final-time">00:00</span></div>
+        <div>🎯 Intentos totales: <span id="final-moves">0</span></div>
+      </div>
+
+      <button class="btn-reset" onclick="initGame()">¡Volver a Jugar!</button>
+    </div>
+  </div>
+
+  <script>
+    // Conceptos pedagógicos sobre el Ciclo Vital de la Planta
+    const gameData = [
+      {
+        id: 'semilla',
+        concept: 'Semilla',
+        icon: '🫘',
+        desc: 'Contiene el embrión de la planta esperando agua y tierra'
+      },
+      {
+        id: 'germinacion',
+        concept: 'Germinación',
+        icon: '🌱',
+        desc: 'La semilla absorbe agua, se abre y le brota la primera raíz'
+      },
+      {
+        id: 'crecimiento',
+        concept: 'Plántula y Crecimiento',
+        icon: '🌿',
+        desc: 'El tallo crece hacia la luz y nacen las primeras hojas verdes'
+      },
+      {
+        id: 'floracion',
+        concept: 'Floración',
+        icon: '🌸',
+        desc: 'La planta adulta produce flores para su reproducción'
+      },
+      {
+        id: 'polinizacion',
+        concept: 'Polinización y Fruto',
+        icon: '🍎',
+        desc: 'Los insectos llevan polen y las flores se transforman en frutos'
+      },
+      {
+        id: 'dispersion',
+        concept: 'Dispersión de Semillas',
+        icon: '💨',
+        desc: 'El viento y los animales esparcen semillas para reiniciar el ciclo'
+      }
+    ];
+
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let moves = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isBoardLocked = false;
+
+    // Generador de Efectos de Sonido con Web Audio API
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'flip') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === 'match') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(660, now + 0.1);
+        osc.frequency.setValueAtTime(880, now + 0.2);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'win') {
+        const notes = [440, 554.37, 659.25, 880, 1046.50];
+        notes.forEach((freq, idx) => {
+          const subOsc = audioCtx.createOscillator();
+          const subGain = audioCtx.createGain();
+          subOsc.connect(subGain);
+          subGain.connect(audioCtx.destination);
+          subOsc.frequency.setValueAtTime(freq, now + idx * 0.12);
+          subGain.gain.setValueAtTime(0.15, now + idx * 0.12);
+          subGain.gain.linearRampToValueAtTime(0.01, now + idx * 0.12 + 0.25);
+          subOsc.start(now + idx * 0.12);
+          subOsc.stop(now + idx * 0.12 + 0.25);
+        });
+      }
+    }
+
+    // Inicializar o Reiniciar Juego
+    function initGame() {
+      // Ocultar modal
+      document.getElementById('modal').classList.remove('active');
+
+      // Resetear Variables
+      matchedPairs = 0;
+      moves = 0;
+      secondsElapsed = 0;
+      flippedCards = [];
+      isBoardLocked = false;
+
+      document.getElementById('moves').textContent = '0';
+      document.getElementById('matches').textContent = `0 / ${gameData.length}`;
+      document.getElementById('timer').textContent = '00:00';
+
+      // Reiniciar temporizador
+      clearInterval(timerInterval);
+      timerInterval = setInterval(updateTimer, 1000);
+
+      // Crear Baraja Duplicada (12 cartas: Concepto y Función)
+      cards = [];
+      gameData.forEach(item => {
+        // Carta de Etapa
+        cards.push({
+          key: item.id,
+          type: 'concept',
+          icon: item.icon,
+          text: item.concept,
+          desc: 'Etapa del Ciclo'
+        });
+        // Carta de Explicación
+        cards.push({
+          key: item.id,
+          type: 'desc',
+          icon: item.icon,
+          text: item.concept,
+          desc: item.desc
+        });
+      });
+
+      // Mezclar Cartas
+      cards.sort(() => Math.random() - 0.5);
+
+      // Renderizar Tablero
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      cards.forEach((data, index) => {
+        const cardEl = document.createElement('div');
+        cardEl.classList.add('card');
+        cardEl.dataset.index = index;
+        cardEl.dataset.key = data.key;
+
+        cardEl.innerHTML = `
+          <div class="card-face card-front">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
+            </svg>
+            <span>CICLO</span>
+          </div>
+          <div class="card-face card-back">
+            <div class="card-icon">${data.icon}</div>
+            <div class="card-text">${data.text}</div>
+            <div class="card-desc">${data.desc}</div>
+          </div>
+        `;
+
+        cardEl.addEventListener('click', () => handleCardClick(cardEl));
+        board.appendChild(cardEl);
+      });
+    }
+
+    // Manejar Clics en las Cartas
+    function handleCardClick(cardEl) {
+      if (
+        isBoardLocked ||
+        cardEl.classList.contains('flipped') ||
+        cardEl.classList.contains('matched')
+      ) {
+        return;
+      }
+
+      playSound('flip');
+      cardEl.classList.add('flipped');
+      flippedCards.push(cardEl);
+
+      if (flippedCards.length === 2) {
+        checkMatch();
+      }
+    }
+
+    // Verificar Pareja
+    function checkMatch() {
+      isBoardLocked = true;
+      moves++;
+      document.getElementById('moves').textContent = moves;
+
+      const [card1, card2] = flippedCards;
+      const isMatch = card1.dataset.key === card2.dataset.key;
+
+      if (isMatch) {
+        playSound('match');
+        card1.classList.add('matched');
+        card2.classList.add('matched');
+        matchedPairs++;
+        document.getElementById('matches').textContent = `${matchedPairs} / ${gameData.length}`;
+
+        flippedCards = [];
+        isBoardLocked = false;
+
+        if (matchedPairs === gameData.length) {
+          endGame();
+        }
+      } else {
+        setTimeout(() => {
+          card1.classList.remove('flipped');
+          card2.classList.remove('flipped');
+          flippedCards = [];
+          isBoardLocked = false;
+        }, 1200);
+      }
+    }
+
+    // Actualizar Cronómetro
+    function updateTimer() {
+      secondsElapsed++;
+      const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+      const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+      document.getElementById('timer').textContent = `${mins}:${secs}`;
+    }
+
+    // Finalizar Juego
+    function endGame() {
+      clearInterval(timerInterval);
+      playSound('win');
+
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 130,
+          spread: 85,
+          origin: { y: 0.6 }
+        });
+      }
+
+      document.getElementById('final-time').textContent = document.getElementById('timer').textContent;
+      document.getElementById('final-moves').textContent = moves;
+      
+      setTimeout(() => {
+        document.getElementById('modal').classList.add('active');
+      }, 500);
+    }
+
+    // Iniciar al cargar
+    window.onload = initGame;
+  </script>
+</body>
+</html>
